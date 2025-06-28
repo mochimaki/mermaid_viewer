@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mochimaki System Graph Viewer - Simple</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <style>
+        .viewer-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .viewer-header {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .viewer-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        .viewer-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .viewer-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            min-width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .viewer-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .viewer-content {
+            flex: 1;
+            overflow: auto;
+            background: rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .viewer-graph {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        
+        .viewer-status {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 0.25rem 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="viewer-container">
+        <header class="viewer-header">
+            <h1 class="viewer-title">Mochimaki System Graph</h1>
+            <div class="viewer-controls">
+                <button id="refreshBtn" class="viewer-btn" title="更新">⟳</button>
+                <button id="fullscreenBtn" class="viewer-btn" title="全画面">⛶</button>
+                <button id="exportBtn" class="viewer-btn" title="エクスポート">📷</button>
+            </div>
+        </header>
+
+        <main class="viewer-content">
+            <div id="viewerGraph" class="viewer-graph">
+                <div class="loading">グラフを読み込み中...</div>
+            </div>
+        </main>
+
+        <footer class="viewer-status">
+            <span id="viewerStatus">接続中...</span>
+        </footer>
+    </div>
+
+    <script>
+        // グローバル変数
+        let ws = null;
+        let currentGraphData = null;
+
+        // DOM要素
+        const viewerGraph = document.getElementById('viewerGraph');
+        const viewerStatus = document.getElementById('viewerStatus');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const exportBtn = document.getElementById('exportBtn');
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeMermaid();
+            initializeWebSocket();
+            initializeEventListeners();
+            loadInitialGraph();
+        });
+
+        // Mermaid.jsの初期化
+        function initializeMermaid() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: 'dark',
+                flowchart: {
+                    useMaxWidth: false,
+                    htmlLabels: true
+                },
+                securityLevel: 'loose'
+            });
+        }
+
+        // WebSocket接続の初期化
+        function initializeWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/graph-updates`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                updateStatus('接続済み');
+                console.log('WebSocket connected');
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    handleWebSocketMessage(message);
+                } catch (error) {
+                    console.error('WebSocket message parse error:', error);
+                }
+            };
+            
+            ws.onclose = () => {
+                updateStatus('未接続');
+                console.log('WebSocket disconnected');
+                setTimeout(initializeWebSocket, 5000);
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                updateStatus('エラー');
+            };
+        }
+
+        // WebSocketメッセージの処理
+        function handleWebSocketMessage(message) {
+            switch (message.type) {
+                case 'graph_updated':
+                case 'current_graph':
+                    updateGraph(message.data);
+                    break;
+                case 'error':
+                    showError(message.message);
+                    break;
+                default:
+                    console.log('Unknown message type:', message.type);
+            }
+        }
+
+        // イベントリスナーの初期化
+        function initializeEventListeners() {
+            refreshBtn.addEventListener('click', loadInitialGraph);
+            fullscreenBtn.addEventListener('click', toggleFullscreen);
+            exportBtn.addEventListener('click', exportGraph);
+        }
+
+        // 初期グラフの読み込み
+        async function loadInitialGraph() {
+            try {
+                updateStatus('読み込み中...');
+                const response = await fetch('/api/graph');
+                const data = await response.json();
+                
+                if (data.graphData) {
+                    updateGraph(data.graphData);
+                } else {
+                    showLoadingMessage('グラフデータがありません');
+                }
+            } catch (error) {
+                console.error('Failed to load initial graph:', error);
+                showError('グラフの読み込みに失敗しました');
+            }
+        }
+
+        // グラフの更新
+        async function updateGraph(graphData) {
+            try {
+                currentGraphData = graphData;
+                
+                if (graphData.svg) {
+                    viewerGraph.innerHTML = graphData.svg;
+                } else if (graphData.mermaidContent) {
+                    const { svg } = await mermaid.render('viewer-graph', graphData.mermaidContent);
+                    viewerGraph.innerHTML = svg;
+                }
+                
+                updateStatus('更新済み');
+                
+            } catch (error) {
+                console.error('Failed to update graph:', error);
+                showError('グラフの更新に失敗しました');
+            }
+        }
+
+        // 全画面切り替え
+        function toggleFullscreen() {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                document.documentElement.requestFullscreen();
+            }
+        }
+
+        // エクスポート機能
+        function exportGraph() {
+            try {
+                const svg = viewerGraph.querySelector('svg');
+                if (!svg) {
+                    showError('エクスポートするグラフがありません');
+                    return;
+                }
+                
+                const svgData = new XMLSerializer().serializeToString(svg);
+                const blob = new Blob([svgData], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `mochimaki-system-graph-${new Date().toISOString().slice(0, 19)}.svg`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                updateStatus('エクスポート完了');
+            } catch (error) {
+                console.error('Export error:', error);
+                showError('エクスポートに失敗しました');
+            }
+        }
+
+        // ステータス更新
+        function updateStatus(message) {
+            viewerStatus.textContent = message;
+        }
+
+        // エラー表示
+        function showError(message) {
+            console.error(message);
+            updateStatus('エラー: ' + message);
+        }
+
+        // ローディングメッセージ表示
+        function showLoadingMessage(message) {
+            viewerGraph.innerHTML = `<div class="loading">${message}</div>`;
+            updateStatus(message);
+        }
+
+        // キーボードショートカット
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case 'r':
+                        e.preventDefault();
+                        loadInitialGraph();
+                        break;
+                    case 'f':
+                        e.preventDefault();
+                        toggleFullscreen();
+                        break;
+                    case 's':
+                        e.preventDefault();
+                        exportGraph();
+                        break;
+                }
+            } else {
+                switch (e.key) {
+                    case 'F5':
+                        e.preventDefault();
+                        loadInitialGraph();
+                        break;
+                    case 'F11':
+                        e.preventDefault();
+                        toggleFullscreen();
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html> 

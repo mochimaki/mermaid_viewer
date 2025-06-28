@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mochimaki System Graph Viewer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Mochimaki System Graph Viewer</h1>
+            <div class="controls">
+                <button id="zoomIn" class="btn" title="拡大">+</button>
+                <button id="zoomOut" class="btn" title="縮小">-</button>
+                <button id="resetZoom" class="btn" title="リセット">⟲</button>
+                <button id="fullscreen" class="btn" title="全画面">⛶</button>
+                <button id="exportPNG" class="btn" title="PNG出力">📷</button>
+                <button id="exportSVG" class="btn" title="SVG出力">📄</button>
+                <select id="themeSelect" class="theme-select">
+                    <option value="dark">ダークテーマ</option>
+                    <option value="light">ライトテーマ</option>
+                    <option value="forest">フォレスト</option>
+                    <option value="neutral">ニュートラル</option>
+                </select>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="search-section">
+                    <input type="text" id="searchInput" placeholder="ノードを検索..." class="search-input">
+                    <button id="searchBtn" class="btn">検索</button>
+                    <button id="clearSearch" class="btn">クリア</button>
+                </div>
+                
+                <div class="info-section">
+                    <h3>グラフ情報</h3>
+                    <div id="graphInfo" class="info-content">
+                        <p>グラフが読み込まれていません</p>
+                    </div>
+                </div>
+                
+                <div class="status-section">
+                    <h3>接続状態</h3>
+                    <div id="connectionStatus" class="status-indicator">
+                        <span class="status-dot disconnected"></span>
+                        <span>未接続</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="graph-container">
+                <div id="graphWrapper" class="graph-wrapper">
+                    <div id="graphContent" class="graph-content">
+                        <div class="loading">グラフを読み込み中...</div>
+                    </div>
+                </div>
+                <div id="tooltip" class="tooltip"></div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="footer-info">
+                <span id="lastUpdate">最終更新: -</span>
+                <span id="nodeCount">ノード数: 0</span>
+                <span id="edgeCount">エッジ数: 0</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
