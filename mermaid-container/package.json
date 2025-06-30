@@ -1,7 +1,7 @@
 {
-  "name": "mermaid-system-graph-viewer",
+  "name": "mermaid-graph-viewer",
   "version": "1.0.0",
-  "description": "Mermaid.js based system graph viewer for Mochimaki project",
+  "description": "A Docker-based Mermaid.js graph viewer with real-time updates and interactive features",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -12,11 +12,12 @@
   "keywords": [
     "mermaid",
     "graph",
-    "system",
     "viewer",
-    "docker"
+    "docker",
+    "diagram",
+    "visualization"
   ],
-  "author": "Mochimaki Project",
+  "author": "Mochimaki",
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
