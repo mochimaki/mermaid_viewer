@@ -14,6 +14,7 @@ Perfect for system architecture visualization and dynamic graph generation.
 - **Responsive Design**: Mobile and desktop compatible
 - **Fullscreen Display**: Fullscreen mode for presentations
 - **High-resolution PNG Export**: Customizable resolution for professional output
+- **Dynamic Port Assignment**: Automatic port allocation to avoid conflicts
 
 ## Technology Stack
 
@@ -26,16 +27,40 @@ Perfect for system architecture visualization and dynamic graph generation.
 
 ## Quick Start
 
-### Using Docker
+### Using Docker (Dynamic Port)
 
 ```bash
 # Build the container
 docker build -t mermaid-graph-viewer .
 
-# Run the container
+# Run the container with dynamic port assignment
+docker run -d \
+  --name mermaid-graph-viewer \
+  -p 0:8080 \
+  mermaid-graph-viewer
+
+# Check the assigned port
+docker port mermaid-graph-viewer
+```
+
+### Using Docker (Fixed Port)
+
+```bash
+# Run the container with specific port
 docker run -d \
   --name mermaid-graph-viewer \
   -p 8080:8080 \
+  mermaid-graph-viewer
+```
+
+### Using Docker (Custom Port)
+
+```bash
+# Run the container with custom port
+docker run -d \
+  --name mermaid-graph-viewer \
+  -p 9000:8080 \
+  -e PORT=8080 \
   mermaid-graph-viewer
 ```
 
@@ -50,6 +75,70 @@ npm run dev
 
 # Start production server
 npm start
+```
+
+## Port Management
+
+### Dynamic Port Assignment
+The container supports dynamic port assignment to avoid conflicts with other services:
+
+```bash
+# Let Docker assign an available port
+docker run -d -p 0:8080 mermaid-graph-viewer
+
+# Check assigned port
+docker port mermaid-graph-viewer
+# Output: 8080/tcp -> 0.0.0.0:32768
+```
+
+### Finding Container Port
+To find the port assigned to the container:
+
+```bash
+# Method 1: Using docker port
+docker port mermaid-graph-viewer
+
+# Method 2: Using docker inspect
+docker inspect mermaid-graph-viewer | grep -A 10 "PortBindings"
+
+# Method 3: Using docker ps
+docker ps --format "table {{.Names}}\t{{.Ports}}"
+```
+
+### Integration with Other Applications
+When integrating with other applications (like Mochimaki), use the following approach:
+
+```python
+import subprocess
+import json
+
+def get_container_port(container_name="mermaid-graph-viewer"):
+    """Get the external port assigned to the container"""
+    try:
+        result = subprocess.run(
+            ["docker", "port", container_name],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        
+        # Parse port mapping (e.g., "8080/tcp -> 0.0.0.0:32768")
+        port_line = result.stdout.strip().split('\n')[0]
+        external_port = port_line.split('->')[1].split(':')[1]
+        
+        return external_port
+    except subprocess.CalledProcessError:
+        return None
+
+def open_browser():
+    """Open browser with dynamic port"""
+    port = get_container_port()
+    if port:
+        url = f"http://localhost:{port}"
+        # Open browser with the URL
+        print(f"Opening browser: {url}")
+    else:
+        print("Container not found or not running")
 ```
 
 ## API Specification
@@ -215,10 +304,15 @@ npm run dev
 
 2. **WebSocket connection errors**
    - Verify firewall settings
-   - Ensure port 8080 is open
+   - Ensure port is open
    - Check proxy configuration
 
-3. **Performance issues**
+3. **Port conflicts**
+   - Use dynamic port assignment: `docker run -d -p 0:8080 mermaid-graph-viewer`
+   - Check available ports: `netstat -tulpn | grep LISTEN`
+   - Use different port: `docker run -d -p 9000:8080 mermaid-graph-viewer`
+
+4. **Performance issues**
    - Consider progressive rendering for large graphs
    - Monitor browser memory usage
    - Disable unnecessary animations
@@ -259,4 +353,5 @@ Pull requests and issue reports are welcome.
 - Basic graph display functionality
 - Interactive operations
 - Real-time updates
-- Export functionality 
+- Export functionality
+- Dynamic port assignment 

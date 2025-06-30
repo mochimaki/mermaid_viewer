@@ -302,11 +302,12 @@ app.use((req, res) => {
 
 // サーバー起動
 server.listen(PORT, () => {
-  console.log(`Mermaid System Graph Viewer running on port ${PORT}`);
+  console.log(`Mermaid Graph Viewer running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/api/health`);
   console.log(`Main page: http://localhost:${PORT}/`);
   console.log(`Viewer page: http://localhost:${PORT}/viewer`);
   console.log(`Graph image: http://localhost:${PORT}/api/graph-image`);
+  console.log(`Container port: ${PORT} (use this port for external access)`);
 });
 
 // グレースフルシャットダウン

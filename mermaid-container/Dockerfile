@@ -31,12 +31,12 @@ RUN npm install -g @mermaid-js/mermaid-cli
 # アプリケーションコードをコピー
 COPY . .
 
-# ポート8080を公開
-EXPOSE 8080
+# 動的ポートを公開（環境変数PORTで指定、デフォルト8080）
+EXPOSE ${PORT:-8080}
 
-# ヘルスチェックを設定
+# ヘルスチェックを設定（動的ポートに対応）
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "import('node-fetch').then(fetch => fetch.default('http://localhost:8080/api/health')).then(res => { if (!res.ok) process.exit(1) }).catch(() => process.exit(1))"
+  CMD node -e "import('node-fetch').then(fetch => fetch.default(\`http://localhost:\${process.env.PORT || 8080}/api/health\`)).then(res => { if (!res.ok) process.exit(1) }).catch(() => process.exit(1))"
 
 # アプリケーションを起動
 CMD ["npm", "start"] 
